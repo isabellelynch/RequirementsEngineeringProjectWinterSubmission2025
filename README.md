@@ -6,7 +6,7 @@
 
 A Windows Forms prototype of a booking system for a grinds (tuition) practice. The manager can manage tutors and students, build a weekly schedule of grinds, take and cancel bookings on behalf of students, and view revenue and tutor earnings reports.
 
-The prototype accompanies the requirements specification in `SupportingDocumentation/RE_Lynch_Isabelle.docx`, which describes the full system through its use cases, business rules and data files.
+The prototype accompanies the requirements specification in `SupportingDocumentation/RE_Lynch_Isabelle.docx` ([Markdown version](SupportingDocumentation/RE_Lynch_Isabelle.md)), which describes the full system through its use cases, business rules and data files.
 
 ---
 
@@ -15,6 +15,8 @@ The prototype accompanies the requirements specification in `SupportingDocumenta
 ```
 SupportingDocumentation/
     RE_Lynch_Isabelle.docx      Requirements specification (use cases, business rules)
+    RE_Lynch_Isabelle.md        The same specification in Markdown, readable on GitHub
+    images/                     Diagrams used by the Markdown version
 Prototype/
     GrindsBookingSystem.sln     Visual Studio solution
     background.jpg              Background image used by the forms
