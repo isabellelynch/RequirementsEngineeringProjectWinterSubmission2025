@@ -163,47 +163,63 @@ namespace GrindsBookingSystem
                 return;
                 }
 
+                //the tutor's upcoming grinds, and any bookings made for them, must be cancelled
+                var futureGrinds = ScheduleDataStore.ScheduleItems
+                    .Where(g => g.TutorID == tutorToRemove.TutorID && g.TimeandDate > DateTime.Now)
+                    .ToList();
+                var futureBookings = BookingDataStore.Bookings
+                    .Where(b => b.TutorID == tutorToRemove.TutorID && b.GrindTime > DateTime.Now)
+                    .ToList();
+
+                string grindWarning = futureGrinds.Count > 0 || futureBookings.Count > 0
+                    ? "\n\nThis tutor has " + futureGrinds.Count + " upcoming grind(s) and " + futureBookings.Count +
+                      " booking(s). These will be cancelled and all students will receive a full refund."
+                    : "";
+
                 DialogResult response = MessageBox.Show(
-                    "Are you sure you want to remove " +  tutorToRemove.FirstName + " " + tutorToRemove.Surname + "?",
+                    "Are you sure you want to remove " +  tutorToRemove.FirstName + " " + tutorToRemove.Surname + "?" + grindWarning,
                     "Confirm Removal",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
 
                 if (response == DialogResult.Yes)
                 {
-                    MessageBox.Show(
-                        "Tutor " + tutorToRemove.FirstName + " " + tutorToRemove.Surname + " has been successfully removed from the system.",
-                        "Success",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    TutorDataStore.Tutors.Remove(tutorToRemove);
-                    foreach(var s in ScheduleDataStore.ScheduleItems)
+                    //cancel every future booking with this tutor - the practice cancelled, so a full refund is always given
+                    int totalRefund = 0;
+                    var studentsToNotify = new List<string>();
+                    foreach (var booking in futureBookings)
                     {
-                        if(s.TutorID == tutorToRemove.TutorID)
-                        {
-                            //ScheduleDataStore.ScheduleItems.Remove(s);
-                            //foreach( var s2 in s.students)
-                           // {
-                                //send email to each s2 (student that had been enrolled
-                                //in the class with the tutor that has been removed
-                            //}
-                            //foreach(var b in BookingDataStore.Bookings)
-                            //{
-                                //if(b.GrindTime == s.TimeandDate && b.TutorID == s.TutorID)
-                                //{
-                                    //refund amount paid to students who have paid
-                                //}
-                            //}
-                        }
+                        totalRefund += frmHome.CancelBookingAndRefund(booking, true);
+                        studentsToNotify.Add(frmHome.StudentName(booking.StudentID));
                     }
-                    LoadAllTutors(); 
+
+                    //remove the tutor's grinds from the schedule
+                    foreach (var grind in futureGrinds)
+                    {
+                        ScheduleDataStore.ScheduleItems.Remove(grind);
+                    }
+
+                    TutorDataStore.Tutors.Remove(tutorToRemove);
+
+                    string message = "Tutor " + tutorToRemove.FirstName + " " + tutorToRemove.Surname + " has been successfully removed from the system.";
+                    if (futureGrinds.Count > 0 || futureBookings.Count > 0)
+                    {
+                        message += "\n\n" + futureGrinds.Count + " grind(s) removed from the schedule and " +
+                                   futureBookings.Count + " booking(s) cancelled. Total refunded: €" + totalRefund + ".";
+                    }
+                    if (studentsToNotify.Count > 0)
+                    {
+                        //in the full system these students would be emailed about the cancellation
+                        message += "\n\nStudents to be notified: " + string.Join(", ", studentsToNotify.Distinct());
+                    }
+                    MessageBox.Show(message, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    LoadAllTutors();
                 }
             }
 
             private void btnBack_Click(object sender, EventArgs e)
             {
-                this.Hide();
-                Owner.Show();
+                this.Close();
         }
 
             private void btnExit_Click(object sender, EventArgs e)
@@ -214,7 +230,7 @@ namespace GrindsBookingSystem
                                                     MessageBoxIcon.Question);
                 if (result == DialogResult.Yes)
                 {
-                    Application.Exit();
+                    frmHome.ExitApplication();
                 }
 
             }

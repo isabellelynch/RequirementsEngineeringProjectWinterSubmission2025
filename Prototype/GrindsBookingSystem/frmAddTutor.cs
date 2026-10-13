@@ -49,21 +49,25 @@ namespace GrindsBookingSystem
             {
 
                 DialogResult result = MessageBox.Show("Before we add " + txtTutorName.Text + " " +
-                                                     txtTutorSurname.Text + " to the system, have they supplied proof of their Garda Vetting" +
+                                                     txtTutorSurname.Text + " to the system, have they supplied proof of their Garda Vetting " +
                                                      "information?",
                                                      "Please Confirm",
                                                      MessageBoxButtons.YesNo,
                                                      MessageBoxIcon.Question);
                 if (result == DialogResult.Yes)
                 {
-                    MessageBox.Show("Tutor " + txtTutorName.Text + " " + txtTutorSurname.Text + " has been succesfully added to the system.",
+                    var rate = cboTutorRates.SelectedItem.ToString().Substring(0,3);
+                    var subject = cboTutorSubjects.SelectedItem.ToString();
+
+                    //only show the success message if the tutor was actually added (not a duplicate)
+                    if (!addTutor(rate, subject))
+                    {
+                        return;
+                    }
+                    MessageBox.Show("Tutor " + txtTutorName.Text + " " + txtTutorSurname.Text + " has been successfully added to the system.",
                                     "Success",
                                      MessageBoxButtons.OK,
                                      MessageBoxIcon.Information);
-                    var rate = cboTutorRates.Text.Substring(0,3);
-                    var subject = cboTutorSubjects.Text;
-
-                    addTutor(rate, subject);
                     DialogResult addAnother = MessageBox.Show("Would you like to add another Tutor?",
                                                           "Please Confirm",
                                                           MessageBoxButtons.YesNo,
@@ -94,11 +98,11 @@ namespace GrindsBookingSystem
         public void goHome()
         {
             clearUI();
-            Owner.Show();
-            this.Hide();
+            this.Close();
         }
         public void loadRateCodes()
         {
+            cboTutorRates.Items.Clear();
             cboTutorRates.Items.Add("SNR - €50 per hour Senior Tutor");
             cboTutorRates.Items.Add("JNR - €40 per hour Junior Tutor");
             cboTutorRates.Items.Add("NEW - €30 per hour Trainee Tutor");
@@ -106,6 +110,7 @@ namespace GrindsBookingSystem
 
         public void loadSubjects()
         {
+            cboTutorSubjects.Items.Clear();
             cboTutorSubjects.Items.Add("Maths");
             cboTutorSubjects.Items.Add("Irish");
             cboTutorSubjects.Items.Add("English");
@@ -124,36 +129,46 @@ namespace GrindsBookingSystem
             txtTutorSurname.Clear();
             txtTutorEmail.Clear();
             txtTutorPhone.Clear();
-            cboTutorRates.Items.Clear();
-            cboTutorSubjects.Items.Clear();
+            //deselect the drop downs rather than emptying them, so they can still be used afterwards
+            cboTutorRates.SelectedIndex = -1;
+            cboTutorRates.Text = "";
+            cboTutorSubjects.SelectedIndex = -1;
+            cboTutorSubjects.Text = "";
             validMessage = "";
 
         }
         
-        public void addTutor(String rate, String subject)
+        public bool addTutor(String rate, String subject)
         {
-            Tutor t = new Tutor()
-            {
-                TutorID = TutorDataStore.GetNextId(),
-                FirstName = txtTutorName.Text,
-                Surname = txtTutorSurname.Text,
-                Phone = txtTutorPhone.Text,
-                Email = txtTutorEmail.Text,
-                RateCode = rate,
-                Subject = subject
-            };
+            //a tutor with the same name and email address is treated as a duplicate
+            bool duplicate = TutorDataStore.Tutors.Any(tu =>
+                string.Equals(tu.FirstName.Trim(), txtTutorName.Text.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(tu.Surname.Trim(), txtTutorSurname.Text.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(tu.Email.Trim(), txtTutorEmail.Text.Trim(), StringComparison.OrdinalIgnoreCase));
 
-            if (TutorDataStore.Tutors.Contains(t))
+            if (duplicate)
             {
-                MessageBox.Show("Duplicate Tutor detected, this student already exists in our system.",
+                MessageBox.Show("Duplicate Tutor detected, this tutor already exists in our system.",
                                 "Duplicate Tutor",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
                 clearUI();
-                return;
+                return false;
             }
 
+            Tutor t = new Tutor()
+            {
+                TutorID = TutorDataStore.GetNextId(),
+                FirstName = txtTutorName.Text.Trim(),
+                Surname = txtTutorSurname.Text.Trim(),
+                Phone = txtTutorPhone.Text.Trim(),
+                Email = txtTutorEmail.Text.Trim(),
+                RateCode = rate,
+                Subject = subject
+            };
+
             TutorDataStore.Tutors.Add(t);
+            return true;
         }
 
         private void frmAddTutor_Load(object sender, EventArgs e)
@@ -165,8 +180,7 @@ namespace GrindsBookingSystem
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            Owner.Show();
-            this.Hide();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -177,7 +191,7 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
 

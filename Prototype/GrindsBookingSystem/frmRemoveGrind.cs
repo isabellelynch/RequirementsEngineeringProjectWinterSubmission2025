@@ -34,7 +34,7 @@ namespace GrindsBookingSystem
             lvGrinds.Items.Clear();
             foreach (var grind in ScheduleDataStore.ScheduleItems.OrderBy(g => g.TimeandDate))
             {
-                if(grind.TimeandDate < DateTime.Today)
+                if(grind.TimeandDate < DateTime.Now)
                 {
                     continue;
                 }
@@ -42,6 +42,7 @@ namespace GrindsBookingSystem
                 item.SubItems.Add(grind.TimeandDate.ToShortTimeString());
                 item.SubItems.Add(grind.RoomNo);
                 item.SubItems.Add(grind.TutorID.ToString());
+                item.Tag = grind;
                 lvGrinds.Items.Add(item);
             }
         }
@@ -55,19 +56,15 @@ namespace GrindsBookingSystem
             }
             
 
-            var selectedItem = lvGrinds.SelectedItems[0];
-            DateTime date = DateTime.Parse(selectedItem.SubItems[0].Text);
-            TimeSpan time = TimeSpan.Parse(selectedItem.SubItems[1].Text);
-            string room = selectedItem.SubItems[2].Text;
-            int tutorID = int.Parse(selectedItem.SubItems[3].Text);
+            //the grind is stored in the row's Tag, so there is no need to parse the displayed date and time
+            var grindToRemove = lvGrinds.SelectedItems[0].Tag as Schedule;
 
-
-            var grindToRemove = ScheduleDataStore.ScheduleItems.FirstOrDefault(g =>
-                g.TimeandDate.Date == date.Date &&
-                g.TimeandDate.TimeOfDay == time &&
-                g.RoomNo == room &&
-                g.TutorID == tutorID
-            );
+            if (grindToRemove == null || !ScheduleDataStore.ScheduleItems.Contains(grindToRemove))
+            {
+                MessageBox.Show("Could not find the selected grind.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                PopulateGrinds();
+                return;
+            }
 
             if(grindToRemove.TimeandDate <= DateTime.Today.AddDays(7) && grindToRemove.currentEnrollment > 0)
             {
@@ -75,23 +72,45 @@ namespace GrindsBookingSystem
                     "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            if (grindToRemove != null)
+
+            var bookingsForGrind = BookingDataStore.Bookings
+                .Where(b => b.GrindTime == grindToRemove.TimeandDate && b.TutorID == grindToRemove.TutorID)
+                .ToList();
+
+            DialogResult confirm = MessageBox.Show("Are you sure you want to remove the grind on " +
+                grindToRemove.TimeandDate.ToString("g") + " in room " + grindToRemove.RoomNo + "?" +
+                (bookingsForGrind.Count > 0 ? "\n\n" + bookingsForGrind.Count + " booking(s) will be cancelled and fully refunded." : ""),
+                "Confirm Removal", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes)
             {
-                ScheduleDataStore.ScheduleItems.Remove(grindToRemove);
-                MessageBox.Show("Grind removed successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                PopulateGrinds();
+                return;
             }
-            else
+
+            //cancel and fully refund every booking for this grind, as the practice is cancelling it
+            int totalRefund = 0;
+            var studentsToNotify = new List<string>();
+            foreach (var booking in bookingsForGrind)
             {
-                MessageBox.Show("Could not find the selected grind.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                totalRefund += frmHome.CancelBookingAndRefund(booking, true);
+                studentsToNotify.Add(frmHome.StudentName(booking.StudentID));
             }
+
+            ScheduleDataStore.ScheduleItems.Remove(grindToRemove);
+
+            string message = "Grind removed successfully!";
+            if (bookingsForGrind.Count > 0)
+            {
+                //in the full system these students would be emailed about the cancellation
+                message += "\n\n" + bookingsForGrind.Count + " booking(s) cancelled. Total refunded: €" + totalRefund + "." +
+                           "\nStudents to be notified: " + string.Join(", ", studentsToNotify.Distinct());
+            }
+            MessageBox.Show(message, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            PopulateGrinds();
         }
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            var form = new frmSchedule();
-            form.Show();
-            this.Hide();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -102,7 +121,7 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
     }

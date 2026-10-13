@@ -33,15 +33,16 @@ namespace GrindsBookingSystem
             series.BorderWidth = 3;
             chartTutorEarnings.Titles.Add("Tutor Earnings Analysis");
 
-            chartTutorEarnings.ChartAreas[0].AxisX.Title = "Tutor First Name";
+            chartTutorEarnings.ChartAreas[0].AxisX.Title = "Tutor";
             chartTutorEarnings.ChartAreas[0].AxisY.Title = "Earnings €";
             chartTutorEarnings.ChartAreas[0].AxisX.Interval = 1;
 
 
+            //index is declared outside the loop so each tutor gets their own bar position
+            int index = 0;
             foreach (var t in TutorDataStore.Tutors)
             {
                 int total = 0;
-                int index = 0;
                 foreach(var b in BookingDataStore.Bookings)
                 {
                     if(b.TutorID == t.TutorID)
@@ -49,14 +50,9 @@ namespace GrindsBookingSystem
                         total += b.Amount;
                     }
                 }
-                var item = new ListViewItem(t.TutorID.ToString());
-                item.SubItems.Add(t.FirstName);
-                item.SubItems.Add(t.Surname);
-                item.SubItems.Add(total.ToString());
-
                 var point = new DataPoint(index, total)
                 {
-                    AxisLabel = t.FirstName,
+                    AxisLabel = t.FirstName + " " + t.Surname,
                     Tag = t
                 };
 
@@ -68,8 +64,7 @@ namespace GrindsBookingSystem
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -80,7 +75,7 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
 

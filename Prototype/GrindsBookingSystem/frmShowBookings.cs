@@ -104,11 +104,22 @@ namespace GrindsBookingSystem
         private void btnShowBookings_Click(object sender, EventArgs e)
         {
 
+            if (cboStudentID.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a student before continuing.", "No Student Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            var selectedStudent = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == int.Parse(cboStudentID.SelectedItem.ToString()));
+            if (selectedStudent == null)
+            {
+                MessageBox.Show("Student not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             grpCancelBooking.Visible = true;
             cboStudentID.Enabled = false;
             cboName.Enabled = false;
             cboSName.Enabled = false;
-            var selectedStudent = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == int.Parse(cboStudentID.SelectedItem.ToString()));
             var selectedBookings = selectedStudent.bookings;
             updateListView(selectedBookings);
         }
@@ -121,7 +132,7 @@ namespace GrindsBookingSystem
             {
 
                 lvBookings.Columns.Add("Booking Date", 100);
-                lvBookings.Columns.Add("Grind Time", 115);
+                lvBookings.Columns.Add("Grind Date/Time", 140);
                 lvBookings.Columns.Add("Booking Reference", 100);
                 lvBookings.Columns.Add("Tutor ID", 115);
                 lvBookings.Columns.Add("Amount", 130);
@@ -129,7 +140,7 @@ namespace GrindsBookingSystem
             foreach (var b in bookings)
             {
                 var item = new ListViewItem(b.DateOfBooking.ToShortDateString());
-                item.SubItems.Add(b.GrindTime.ToShortTimeString());
+                item.SubItems.Add(b.GrindTime.ToString("g"));
                 item.SubItems.Add(b.bookingRef.ToString());
                 item.SubItems.Add(b.TutorID.ToString());
                 item.SubItems.Add(b.Amount.ToString());
@@ -150,8 +161,7 @@ namespace GrindsBookingSystem
         private void btnRefresh_Click(object sender, EventArgs e) => reset();
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -162,7 +172,7 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
     }

@@ -20,8 +20,15 @@ namespace GrindsBookingSystem
         {
             InitializeComponent();
             lvSchedule.MouseClick += lvSchedule_MouseClick;
-            updateListView(ScheduleDataStore.ScheduleItems.OrderBy(s => s.TimeandDate));
-            
+            //refresh the list whenever this page is shown again (e.g. after adding or removing a grind)
+            this.VisibleChanged += (sender, e) =>
+            {
+                if (this.Visible)
+                {
+                    updateListView(ScheduleDataStore.ScheduleItems);
+                }
+            };
+
         }
 
        
@@ -80,21 +87,17 @@ namespace GrindsBookingSystem
             lvSchedule.View = View.Details;
             lvSchedule.FullRowSelect = true;
             lvSchedule.GridLines = true;
-
+            updateListView(ScheduleDataStore.ScheduleItems);
         }
 
         public void updateListView(IEnumerable<Schedule> schedules)
         {
             schedules = schedules.OrderBy(s => s.TimeandDate);
-            foreach(var item in schedules)
-            {
-                
-            }
             lvSchedule.Items.Clear();
 
             foreach (var s in schedules)
             {
-                if(s.TimeandDate <  DateTime.Today)
+                if(s.TimeandDate <  DateTime.Now)
                 {
                     continue;
                 }
@@ -104,6 +107,7 @@ namespace GrindsBookingSystem
                 item.SubItems.Add(s.currentEnrollment.ToString());
                 item.SubItems.Add(s.RoomNo);
                 item.SubItems.Add(s.TutorID.ToString());
+                item.Tag = s;
 
                 lvSchedule.Items.Add(item);
             }
@@ -111,27 +115,19 @@ namespace GrindsBookingSystem
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            var form = new frmHome();
-            form.Show();
-            this.Hide();
+            this.Close();
         }
 
        
 
         private void btnAddGrind_Click(object sender, EventArgs e)
         {
-            var form = new frmAddGrind();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            frmHome.OpenChild(this, new frmAddGrind());
         }
 
         private void btnRemoveGrind_Click(object sender, EventArgs e)
         {
-            var form = new frmRemoveGrind();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            frmHome.OpenChild(this, new frmRemoveGrind());
         }
 
 
@@ -170,7 +166,7 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
     }

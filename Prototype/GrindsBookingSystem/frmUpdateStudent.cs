@@ -93,8 +93,7 @@ namespace GrindsBookingSystem
         private void btnRefresh_Click(object sender, EventArgs e) => LoadAllStudents();
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -105,13 +104,12 @@ namespace GrindsBookingSystem
                                                 MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
         public void goHome()
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
             cboNames.Enabled = true;
             cboSurnames.Enabled = true;
             cboStudentID.Enabled = true;
@@ -123,6 +121,8 @@ namespace GrindsBookingSystem
             cboSurnames.Enabled = true;
             cboStudentID.Enabled = true;
 
+            txtFirstName.Text = string.Empty;
+            txtLastName.Text = string.Empty;
             txtEmail.Text = string.Empty;
             txtPhone.Text = string.Empty;
             grpStudentDetails.Visible = false;
@@ -138,10 +138,11 @@ namespace GrindsBookingSystem
         {
             var idValue = int.Parse(cboStudentID.Text);
             var student = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == idValue);
-
-
-            student.Email = txtEmail.Text;
-            student.Phone = txtPhone.Text;
+            if (student == null)
+            {
+                MessageBox.Show("Student not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             String validMessage = "";
             while (validMessage == "")
@@ -167,10 +168,13 @@ namespace GrindsBookingSystem
             }
             else
             {
-                int indexVal = StudentDataStore.Students.FindIndex(s => s.StudentID == student.StudentID);
-                StudentDataStore.Students[indexVal] = student;
+                //details are only saved once they have passed validation
+                student.FirstName = txtFirstName.Text.Trim();
+                student.Surname = txtLastName.Text.Trim();
+                student.Email = txtEmail.Text.Trim();
+                student.Phone = txtPhone.Text.Trim();
 
-                MessageBox.Show("Student " + txtFirstName.Text + " " + txtLastName.Text + "'s details have been succesfully updated.",
+                MessageBox.Show("Student " + txtFirstName.Text + " " + txtLastName.Text + "'s details have been successfully updated.",
                                         "Success",
                                          MessageBoxButtons.OK,
                                          MessageBoxIcon.Information);
@@ -230,8 +234,7 @@ namespace GrindsBookingSystem
         private void btnRefresh_Click_1(object sender, EventArgs e) => reset();
         private void btnBack_Click_1(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click_1(object sender, EventArgs e)
@@ -242,7 +245,7 @@ namespace GrindsBookingSystem
                                                     MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
     }

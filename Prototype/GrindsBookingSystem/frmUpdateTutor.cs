@@ -97,8 +97,7 @@ namespace GrindsBookingSystem
         private void btnRefresh_Click(object sender, EventArgs e) => reset();
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -109,12 +108,13 @@ namespace GrindsBookingSystem
                                                     MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
 
         public void loadRateCodes()
         {
+            cboRates.Items.Clear();
             cboRates.Items.Add("SNR - €50 per hour Senior Tutor");
             cboRates.Items.Add("JNR - €40 per hour Junior Tutor");
             cboRates.Items.Add("NEW - €30 per hour Trainee Tutor");
@@ -122,6 +122,7 @@ namespace GrindsBookingSystem
 
         public void loadSubjects()
         {
+            cboSubjects.Items.Clear();
             cboSubjects.Items.Add("Maths");
             cboSubjects.Items.Add("Irish");
             cboSubjects.Items.Add("English");
@@ -164,8 +165,17 @@ namespace GrindsBookingSystem
 
             txtEmail.Text = tutorView.Email;
             txtPhone.Text = tutorView.Phone;
-            cboRates.Text = tutorView.RateCode;
-            cboSubjects.Text = tutorView.Subject;
+
+            //select the tutor's current rate code and subject in the drop downs
+            cboRates.SelectedIndex = -1;
+            for (int i = 0; i < cboRates.Items.Count; i++)
+            {
+                if (cboRates.Items[i].ToString().StartsWith(tutorView.RateCode))
+                {
+                    cboRates.SelectedIndex = i;
+                }
+            }
+            cboSubjects.SelectedIndex = cboSubjects.Items.IndexOf(tutorView.Subject);
 
             grpTutorDetails.Visible = true;
 
@@ -176,10 +186,11 @@ namespace GrindsBookingSystem
         {
             var idValue = int.Parse(cboTutID.Text);
             var tutorView = TutorDataStore.Tutors.FirstOrDefault(t => t.TutorID == idValue);
-
-            tutorView.RateCode = cboRates.Text;
-            tutorView.Email = txtEmail.Text;
-            tutorView.Phone = txtPhone.Text;
+            if (tutorView == null)
+            {
+                MessageBox.Show("Tutor not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             String validMessage = "";
 
@@ -206,10 +217,14 @@ namespace GrindsBookingSystem
             }
             else
             {
-                int indexVal = TutorDataStore.Tutors.FindIndex(tutor => tutor.TutorID == tutorView.TutorID);
-                TutorDataStore.Tutors[indexVal] = tutorView;
+                //details are only saved once they have passed validation
+                //only the 3 letter rate code (e.g. SNR) is stored, so booking prices are worked out correctly
+                tutorView.RateCode = cboRates.SelectedItem.ToString().Substring(0, 3);
+                tutorView.Subject = cboSubjects.SelectedItem.ToString();
+                tutorView.Email = txtEmail.Text.Trim();
+                tutorView.Phone = txtPhone.Text.Trim();
                
-            MessageBox.Show("Tutor " + cboNames.Text + " " + cboSurnames.Text + "'s details have been succesfully updated.",
+            MessageBox.Show("Tutor " + cboNames.Text + " " + cboSurnames.Text + "'s details have been successfully updated.",
                                     "Success",
                                      MessageBoxButtons.OK,
                                      MessageBoxIcon.Information);
@@ -231,8 +246,7 @@ namespace GrindsBookingSystem
 
         public void goHome()
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
             cboNames.Enabled = true;
             cboSurnames.Enabled = true;
             cboTutID.Enabled = true;

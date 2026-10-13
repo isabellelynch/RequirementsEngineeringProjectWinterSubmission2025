@@ -101,11 +101,22 @@ namespace GrindsBookingSystem
 
         private void btnShowBookings_Click(object sender, EventArgs e)
         {
+            if (cboStudentID.SelectedIndex == -1)
+            {
+                MessageBox.Show("Please select a student before continuing.", "No Student Selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            var selectedStudent = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == int.Parse(cboStudentID.SelectedItem.ToString()));
+            if (selectedStudent == null)
+            {
+                MessageBox.Show("Student not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             grpCancelBooking.Visible = true;
             cboStudentID.Enabled = false;
             cboName.Enabled = false;
             cboSName.Enabled = false;
-            var selectedStudent = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == int.Parse(cboStudentID.SelectedItem.ToString()));
             var selectedBookings = selectedStudent.bookings;
             updateListView(selectedBookings);
         }
@@ -118,7 +129,7 @@ namespace GrindsBookingSystem
             {
 
                 lvBookings.Columns.Add("Booking Date", 100);
-                lvBookings.Columns.Add("Grind Time", 115);
+                lvBookings.Columns.Add("Grind Date/Time", 140);
                 lvBookings.Columns.Add("Booking Reference", 100);
                 lvBookings.Columns.Add("Tutor ID", 115);
                 lvBookings.Columns.Add("Amount", 130);
@@ -138,7 +149,7 @@ namespace GrindsBookingSystem
                     continue;
                 }
                 var item = new ListViewItem(b.DateOfBooking.ToShortDateString());
-                item.SubItems.Add(b.GrindTime.ToShortTimeString());
+                item.SubItems.Add(b.GrindTime.ToString("g"));
                 item.SubItems.Add(b.bookingRef.ToString());
                 item.SubItems.Add(b.TutorID.ToString());
                 item.SubItems.Add(b.Amount.ToString());
@@ -163,19 +174,17 @@ namespace GrindsBookingSystem
             var selectedlv = lvBookings.SelectedItems[0];
             var selectedBooking = selectedlv.Tag as Booking;
             var selectedStudent = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == int.Parse(cboStudentID.SelectedItem.ToString()));
-            selectedStudent.bookings.Remove(selectedBooking);
 
-
-            if(selectedBooking.GrindTime > DateTime.Now.AddDays(7))
+            //confirm before changing anything, so choosing Cancel leaves the booking untouched
+            if (selectedBooking.GrindTime > DateTime.Now.AddDays(7))
             {
-                Refund thisRefund = new Refund()
+                DialogResult confirm = MessageBox.Show("This booking is more than 7 days away, so a refund of €" + selectedBooking.Amount +
+                    " will be given. Would you like to proceed with the cancellation?",
+                    "Please Confirm", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+                if (confirm == DialogResult.Cancel)
                 {
-                    refundRef = RefundDataStore.GetNextRefundRef(),
-                    StudentID = selectedStudent.StudentID,
-                    Amount = selectedBooking.Amount
-                };
-
-                RefundDataStore.Refunds.Add(thisRefund);
+                    return;
+                }
             }
             else
             {
@@ -185,27 +194,10 @@ namespace GrindsBookingSystem
                 {
                     return;
                 }
-                
             }
-            BookingDataStore.Bookings.Remove(selectedBooking);
 
-            
-            
-
-
-                foreach (var item in ScheduleDataStore.ScheduleItems)
-                {
-                    if (item.TimeandDate == selectedBooking.GrindTime && item.TutorID == selectedBooking.TutorID)
-                    {
-                        if (item.students.Contains(selectedStudent))
-                        {
-                            item.students.Remove(selectedStudent);
-                            item.currentEnrollment -= 1;
-                        }
-
-                    }
-
-                }
+            //removes the booking from the bookings list, the student and the grind, and records any refund
+            frmHome.CancelBookingAndRefund(selectedBooking, false);
 
             DialogResult result = MessageBox.Show("This Booking has been successfully Cancelled, Would you like to cancel another booking for this student?", "Success", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
             if (result == DialogResult.Yes)
@@ -238,8 +230,7 @@ namespace GrindsBookingSystem
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -250,7 +241,7 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
     }

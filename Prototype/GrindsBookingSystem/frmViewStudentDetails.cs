@@ -88,8 +88,7 @@ namespace GrindsBookingSystem
         private void btnRefresh_Click(object sender, EventArgs e) => LoadAllStudents();
         private void btnBack_Click(object sender, EventArgs e)
         {
-            Owner.Show();
-            this.Hide();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -100,7 +99,7 @@ namespace GrindsBookingSystem
                                                 MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
 

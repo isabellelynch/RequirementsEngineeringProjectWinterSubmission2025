@@ -125,54 +125,40 @@ namespace GrindsBookingSystem
             int intStudentID = int.Parse(cboStudentID.SelectedItem.ToString());
             var selectedStudent = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == intStudentID);
 
-
-
-            if (selectedGrind.currentEnrollment < selectedGrind.MaxAttendnace)
+            var tutor = TutorDataStore.Tutors.FirstOrDefault(t => t.TutorID == selectedGrind.TutorID);
+            if (selectedStudent == null || tutor == null)
             {
-                selectedGrind.currentEnrollment++;
-
-                if (selectedGrind.currentEnrollment == selectedGrind.MaxAttendnace)
-                {
-                    MessageBox.Show("This is the last space available in this grind.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            }
-            else
-            {
-                MessageBox.Show("This grind is fully booked, please select a different grind.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("The selected student or this grind's tutor could not be found. Please refresh and try again.", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            DialogResult dialogResult = MessageBox.Show("Has Student " + selectedStudent.FirstName + " " + selectedStudent.Surname + " provided payment for this grind?",
-                "Payment?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (dialogResult == DialogResult.No || dialogResult == DialogResult.Cancel)
-            {
-                return;
-            }
-
+            //all checks happen before anything is changed, so a cancelled booking doesn't use up a space
             if (selectedGrind.students.Contains(selectedStudent))
             {
                 MessageBox.Show("The student you have chosen has already booked this grind.", "Already Booked",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+
+            if (selectedGrind.currentEnrollment >= selectedGrind.MaxAttendnace)
+            {
+                MessageBox.Show("This grind is fully booked, please select a different grind.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            int thisAmount = frmHome.GetRateAmount(tutor.RateCode);
+
+            DialogResult dialogResult = MessageBox.Show("Has Student " + selectedStudent.FirstName + " " + selectedStudent.Surname + " provided payment of €" + thisAmount + " for this grind?",
+                "Payment?", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (dialogResult == DialogResult.No || dialogResult == DialogResult.Cancel)
+            {
+                return;
+            }
+
+            selectedGrind.currentEnrollment++;
             selectedGrind.students.Add(selectedStudent);
 
-            var tutor = TutorDataStore.Tutors.FirstOrDefault(t => t.TutorID == selectedGrind.TutorID);
-            var tutorCode = tutor.RateCode;
-            int thisAmount = 0;
-
-            if (tutorCode.Equals("SNR"))
-            {
-                thisAmount = 50;
-            }
-            else if (tutorCode.Equals("JNR"))
-            {
-                thisAmount = 40;
-            }
-            else if (tutorCode.Equals("NEW"))
-            {
-                thisAmount = 30;
-            }
             Booking thisBooking = new Booking()
             {
                 bookingRef = BookingDataStore.GetNextBookigRef(),
@@ -185,6 +171,11 @@ namespace GrindsBookingSystem
 
             BookingDataStore.Bookings.Add(thisBooking);
             selectedStudent.bookings.Add(thisBooking);
+
+            if (selectedGrind.currentEnrollment == selectedGrind.MaxAttendnace)
+            {
+                MessageBox.Show("This was the last space available in this grind.", "Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
 
             MessageBox.Show("This grind has been successfully booked for " + selectedStudent.FirstName + " " +
                 selectedStudent.Surname, "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -253,8 +244,7 @@ namespace GrindsBookingSystem
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -265,7 +255,7 @@ namespace GrindsBookingSystem
                                                     MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
     }

@@ -19,82 +19,173 @@ namespace GrindsBookingSystem
         public frmHome()
         {
             InitializeComponent();
-            populateSchedule();
-            PopulateTutorsAndStudents();
-            PopulateBookings();
+
+            //sample data is only loaded the first time the home page is created
+            if (!sampleDataLoaded)
+            {
+                PopulateTutorsAndStudents();
+                populateSchedule();
+                PopulateBookings();
+                sampleDataLoaded = true;
+            }
+        }
+
+        private static bool sampleDataLoaded = false;
+        private static bool isExiting = false;
+
+        //opens a child form, hides the parent, and shows the parent again when the child is closed
+        //(by its Back button, by finishing its task, or by the window's X button)
+        public static void OpenChild(Form parent, Form child)
+        {
+            child.Owner = parent;
+            child.FormClosed += (s, e) =>
+            {
+                if (!isExiting && !parent.IsDisposed)
+                {
+                    parent.Show();
+                    parent.Activate();
+                }
+            };
+            child.Show();
+            parent.Hide();
+        }
+
+        //closes the whole application
+        public static void ExitApplication()
+        {
+            isExiting = true;
+            Application.Exit();
+        }
+
+        //returns a date the given number of days from today, moved forward to a weekday, at the given hour
+        //(sample data uses this so the demo grinds are always in the future, whatever day the app is run)
+        public static DateTime NextWeekday(int daysFromToday, int hour)
+        {
+            DateTime date = DateTime.Today.AddDays(daysFromToday);
+            while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                date = date.AddDays(1);
+            }
+            return date.AddHours(hour);
+        }
+
+        //returns a date the given number of days before today, moved back to a weekday, at the given hour
+        public static DateTime PreviousWeekday(int daysBeforeToday, int hour)
+        {
+            DateTime date = DateTime.Today.AddDays(-daysBeforeToday);
+            while (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                date = date.AddDays(-1);
+            }
+            return date.AddHours(hour);
+        }
+
+        //price per grind for each tutor rate code
+        public static int GetRateAmount(string rateCode)
+        {
+            if (rateCode == null) return 0;
+            if (rateCode.StartsWith("SNR")) return 50;
+            if (rateCode.StartsWith("JNR")) return 40;
+            if (rateCode.StartsWith("NEW")) return 30;
+            return 0;
+        }
+
+        //finds the grind on the schedule that a booking belongs to
+        public static Schedule FindGrindForBooking(Booking booking)
+        {
+            return ScheduleDataStore.ScheduleItems.FirstOrDefault(g => g.TimeandDate == booking.GrindTime && g.TutorID == booking.TutorID);
+        }
+
+        //cancels a booking everywhere it is stored (bookings list, the student's bookings and the grind's enrolment)
+        //a refund is recorded if fullRefund is true, or if the grind is more than 7 days away
+        //returns the amount refunded (0 if no refund was due)
+        public static int CancelBookingAndRefund(Booking booking, bool fullRefund)
+        {
+            BookingDataStore.Bookings.Remove(booking);
+
+            var student = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == booking.StudentID);
+            if (student != null)
+            {
+                student.bookings.Remove(booking);
+            }
+
+            var grind = FindGrindForBooking(booking);
+            if (grind != null)
+            {
+                if (student != null)
+                {
+                    grind.students.Remove(student);
+                }
+                if (grind.currentEnrollment > 0)
+                {
+                    grind.currentEnrollment--;
+                }
+            }
+
+            if (fullRefund || booking.GrindTime > DateTime.Now.AddDays(7))
+            {
+                RefundDataStore.Refunds.Add(new Refund()
+                {
+                    refundRef = RefundDataStore.GetNextRefundRef(),
+                    StudentID = booking.StudentID,
+                    Amount = booking.Amount
+                });
+                return booking.Amount;
+            }
+            return 0;
+        }
+
+        //returns the name of a student for messages
+        public static string StudentName(int studentID)
+        {
+            var s = StudentDataStore.Students.FirstOrDefault(st => st.StudentID == studentID);
+            return s == null ? "Student " + studentID : s.FirstName + " " + s.Surname;
         }
      
 
         private void addToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmAddTutor();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmAddTutor());
         }
 
         private void removeTutorToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmRemoveTutor();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmRemoveTutor());
         }
 
         private void addStudentToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmAddStudent();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmAddStudent());
         }
 
         private void removeStuentToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmRemoveStudent();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmRemoveStudent());
         }
 
         private void updateTutorDetailsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmUpdateTutor();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmUpdateTutor());
         }
 
         private void updateStudentDetailsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmUpdateStudent();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmUpdateStudent());
         }
 
         private void viewStudentDetaisToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmViewStudentDetails();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmViewStudentDetails());
         }
 
         private void viewTutorDetailsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmViewTutorDetails();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmViewTutorDetails());
         }
 
         private void scheduleToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmSchedule();
-            form.Owner = this;
-            form.Show(); 
-            this.Hide();
+            OpenChild(this, new frmSchedule());
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
@@ -105,16 +196,13 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                ExitApplication();
             }
         }
 
         private void makeBookingToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            var form = new frmAddBooking();
-            form.Owner = this;
-            form.Show();
-            this.Hide();
+            OpenChild(this, new frmAddBooking());
         }
 
         public class Schedule
@@ -143,54 +231,41 @@ namespace GrindsBookingSystem
         {
             if (BookingDataStore.Bookings.Count > 0) return;
 
-            Booking b1 = new Booking()
+            //past bookings (used by the revenue and tutor earnings reports)
+            AddSampleBooking(1, 1, PreviousWeekday(60, 9), PreviousWeekday(65, 9));
+            AddSampleBooking(2, 2, PreviousWeekday(30, 15), PreviousWeekday(35, 9));
+
+            //upcoming bookings, linked to grinds on the schedule
+            //student 3's grind is less than 7 days away, so cancelling it will not give a refund
+            //student 1's grind is more than 7 days away, so cancelling it will give a refund
+            var soonGrind = ScheduleDataStore.ScheduleItems.FirstOrDefault(g => g.RoomNo == "S306");
+            var laterGrind = ScheduleDataStore.ScheduleItems.FirstOrDefault(g => g.RoomNo == "R200");
+            AddSampleBooking(3, soonGrind.TutorID, soonGrind.TimeandDate, DateTime.Today.AddDays(-2), soonGrind);
+            AddSampleBooking(1, laterGrind.TutorID, laterGrind.TimeandDate, DateTime.Today.AddDays(-1), laterGrind);
+        }
+
+        private void AddSampleBooking(int studentID, int tutorID, DateTime grindTime, DateTime dateOfBooking, Schedule grind = null)
+        {
+            var tutor = TutorDataStore.Tutors.FirstOrDefault(t => t.TutorID == tutorID);
+            var student = StudentDataStore.Students.FirstOrDefault(s => s.StudentID == studentID);
+            if (tutor == null || student == null) return;
+
+            Booking b = new Booking()
             {
                 bookingRef = BookingDataStore.GetNextBookigRef(),
-                StudentID = 1,
-                DateOfBooking = new DateTime(2025, 11, 28, 9, 0 ,0),
-                GrindTime = new DateTime(2025, 1, 12, 9, 0, 0),
-                TutorID = 1,
-                Amount = 50,
+                StudentID = studentID,
+                DateOfBooking = dateOfBooking,
+                GrindTime = grindTime,
+                TutorID = tutorID,
+                Amount = GetRateAmount(tutor.RateCode),
             };
-            if(!BookingDataStore.Bookings.Contains(b1))
-            {
-                BookingDataStore.Bookings.Add(b1);
-            }
-            Student s = StudentDataStore.Students.FirstOrDefault(s1 => s1.StudentID == b1.StudentID);
-            s.bookings.Add(b1);
+            BookingDataStore.Bookings.Add(b);
+            student.bookings.Add(b);
 
-
-            Booking b2 = new Booking()
+            if (grind != null && !grind.students.Contains(student))
             {
-                bookingRef = BookingDataStore.GetNextBookigRef(),
-                StudentID = 2,
-                DateOfBooking = new DateTime(2025, 11, 11, 9, 0, 0),
-                GrindTime = new DateTime(2025, 7, 12, 15, 0, 0),
-                TutorID = 2,
-                Amount = 40,
-            };
-            if (!BookingDataStore.Bookings.Contains(b2))
-            {
-                BookingDataStore.Bookings.Add(b2);
+                grind.students.Add(student);
             }
-            Student ss = StudentDataStore.Students.FirstOrDefault(s2 => s2.StudentID == b2.StudentID);
-            ss.bookings.Add(b2);
-
-            Booking b3 = new Booking()
-            {
-                bookingRef = BookingDataStore.GetNextBookigRef(),
-                StudentID = 3,
-                DateOfBooking = new DateTime(2025, 11, 15, 9, 0, 0),
-                GrindTime = new DateTime(2025, 12, 12, 14, 0, 0),
-                TutorID = 3,
-                Amount = 30,
-            };
-            if (!BookingDataStore.Bookings.Contains(b3))
-            {
-                BookingDataStore.Bookings.Add(b3);
-            }
-            Student sss = StudentDataStore.Students.FirstOrDefault(s3 => s3.StudentID == b3.StudentID);
-            sss.bookings.Add(b3);
         }
 
         public static class BookingDataStore
@@ -369,7 +444,7 @@ namespace GrindsBookingSystem
 
             Schedule s1 = new Schedule()
             {
-                TimeandDate = new DateTime(2025, 12, 30, 9, 0, 0),
+                TimeandDate = NextWeekday(10, 9),
                 MaxAttendnace = 15,
                 currentEnrollment = 10,
                 RoomNo = "R200",
@@ -385,7 +460,7 @@ namespace GrindsBookingSystem
 
             Schedule s2 = new Schedule()
             {
-                TimeandDate = new DateTime(2025, 12, 28, 10, 0, 0),
+                TimeandDate = NextWeekday(12, 10),
                 MaxAttendnace = 10,
                 currentEnrollment = 8,
                 RoomNo = "S302",
@@ -400,7 +475,7 @@ namespace GrindsBookingSystem
 
             Schedule s3 = new Schedule()
             {
-                TimeandDate = new DateTime(2025, 12, 29, 14, 0, 0),
+                TimeandDate = NextWeekday(3, 14),
                 MaxAttendnace = 10,
                 currentEnrollment = 8,
                 RoomNo = "S306",
@@ -415,7 +490,7 @@ namespace GrindsBookingSystem
 
             Schedule s4 = new Schedule()
             {
-                TimeandDate = new DateTime(2025, 12, 30, 15, 0, 0),
+                TimeandDate = NextWeekday(14, 15),
                 MaxAttendnace = 12,
                 currentEnrollment = 3,
                 RoomNo = "R302",
@@ -430,18 +505,12 @@ namespace GrindsBookingSystem
 
         private void cancelBokingToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Form form = new frmCancelBooking();
-            form.Show();
-            form.Owner = this;
-            this.Hide();
+            OpenChild(this, new frmCancelBooking());
         }
 
         private void viewBookingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Form form = new frmShowBookings();
-            form.Show();
-            form.Owner = this;
-            this.Hide();
+            OpenChild(this, new frmShowBookings());
         }
         public static void ClearCombos(Control.ControlCollection Controls)
         {
@@ -456,7 +525,7 @@ namespace GrindsBookingSystem
         }
         public static String ValidateInput(String Firstname, String Lastname, String Email, String Phone, String StudentTutor, int tutorRateIndex, int tutorSubjectIndex)
         {
-            if (Firstname.Equals(""))
+            if (string.IsNullOrWhiteSpace(Firstname))
             {
                 return StudentTutor + " First Name field must not be empty.";
             }
@@ -466,7 +535,7 @@ namespace GrindsBookingSystem
             }
 
 
-            else if (Lastname.Equals(""))
+            else if (string.IsNullOrWhiteSpace(Lastname))
             {
                 return StudentTutor + " Surname field must not be empty.";
             }
@@ -475,7 +544,7 @@ namespace GrindsBookingSystem
                 return StudentTutor + " Surname field must only contain letters.";
             }
 
-            else if (Email.Equals(""))
+            else if (string.IsNullOrWhiteSpace(Email))
             {
                 return StudentTutor + " Email field must not be empty.";
             }
@@ -483,11 +552,11 @@ namespace GrindsBookingSystem
             {
                 return StudentTutor + " Email field must be in the correct format, example : isabelle@gmail.com";
             }
-            else if (Phone.Equals(""))
+            else if (string.IsNullOrWhiteSpace(Phone))
             {
                 return StudentTutor + " Phone Number field must not be empty.";
             }
-            else if (!Regex.IsMatch(Phone, @"\d{3}-\d{7}$"))
+            else if (!Regex.IsMatch(Phone, @"^\d{3}-\d{7}$"))
             {
                 return StudentTutor + " Phone Number field must be in the format XXX-XXXXXXX.";
             }
@@ -591,21 +660,25 @@ namespace GrindsBookingSystem
 
             public int Compare(object x, object y)
             {
-                var item1 = x as ListViewItem;
-                var item2 = y as ListViewItem;
-
-                // Read values
-                DateTime date1 = DateTime.Parse(item1.SubItems[dateColumnIndex].Text);
-                DateTime date2 = DateTime.Parse(item2.SubItems[dateColumnIndex].Text);
-
-                TimeSpan time1 = TimeSpan.Parse(item1.SubItems[timeColumnIndex].Text);
-                TimeSpan time2 = TimeSpan.Parse(item2.SubItems[timeColumnIndex].Text);
-
-                // Combine date + time
-                DateTime dt1 = date1.Add(time1);
-                DateTime dt2 = date2.Add(time2);
+                DateTime dt1 = GetDateTime(x as ListViewItem);
+                DateTime dt2 = GetDateTime(y as ListViewItem);
 
                 return ascending ? dt1.CompareTo(dt2) : dt2.CompareTo(dt1);
+            }
+
+            //uses the grind time stored in the item's Tag, rather than parsing the displayed text,
+            //because the displayed date/time format depends on the computer's regional settings
+            private DateTime GetDateTime(ListViewItem item)
+            {
+                if (item == null) return DateTime.MinValue;
+                if (item.Tag is Schedule schedule) return schedule.TimeandDate;
+                if (item.Tag is Booking booking) return booking.GrindTime;
+
+                DateTime date;
+                TimeSpan time;
+                DateTime.TryParse(item.SubItems[dateColumnIndex].Text, out date);
+                TimeSpan.TryParse(item.SubItems[timeColumnIndex].Text, out time);
+                return date.Date.Add(time);
             }
         }
 
@@ -615,18 +688,12 @@ namespace GrindsBookingSystem
 
         private void tutorEarningsAnalysisToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Form form = new frmTutorReport();
-            form.Show();
-            form.Owner = this;
-            this.Hide();
+            OpenChild(this, new frmTutorReport());
         }
 
         private void yearlyRevenueAnalysisToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Form form = new frmAdmin();
-            form.Show();
-            form.Owner = this;
-            this.Hide();
+            OpenChild(this, new frmAdmin());
         }
     }
 }

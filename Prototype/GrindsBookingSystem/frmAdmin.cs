@@ -49,10 +49,7 @@ namespace GrindsBookingSystem
 
         private void btnTutorReport_Click(object sender, EventArgs e)
         {
-            Form form = new frmTutorReport();
-            form.Show();
-            form.Owner = this;
-            this.Hide();
+            frmHome.OpenChild(this, new frmTutorReport());
         }
 
         private void btnExit_Click(object sender, EventArgs e)
@@ -63,14 +60,13 @@ namespace GrindsBookingSystem
                                                    MessageBoxIcon.Question);
             if (result == DialogResult.Yes)
             {
-                Application.Exit();
+                frmHome.ExitApplication();
             }
         }
 
         private void btnBack_Click(object sender, EventArgs e)
         {
-            this.Hide();
-            Owner.Show();
+            this.Close();
         }
 
         private void btnRefresh_Click(object sender, EventArgs e)
