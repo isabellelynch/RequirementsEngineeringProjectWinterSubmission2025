@@ -1,6 +1,6 @@
 # Grinds Booking System
 > **This repository has moved.** The requirements specification and prototype are now part of the full project, alongside the finished Oracle-based system:
-> **https://github.com/YOUR-USERNAME/GrindsBookingSystemProject**
+> **https://github.com/isabellelynch/GrindsBookingSystemProject**
 >
 > This repo is kept as the original Requirements Engineering submission (05/12/2025).
 **Author:** Isabelle Lynch (T00264026)
